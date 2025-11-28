@@ -21,11 +21,12 @@ export default function ProductCard({
   const totalCost = product.price * quantity;
   // [BONUS TODO 3]: Check if product is low stock and apply appropriate UI styles
   const isLowStock = product.stock <= 2;
+  const isOutOfStock = product.stock === 0;
 
   return (
     <div
       key={product.id}
-      className={`product-card border-gray-300`}
+      className={`product-card border-gray-300 ${isOutOfStock ? 'opacity-75' : ''}`}
     >
       {/* Product Header with Icon */}
       <div className={`relative p-7 bg-gradient-to-br from-blue-600 via-indigo-600 to-purple-600`}>
@@ -36,13 +37,14 @@ export default function ProductCard({
         </div>
         <h3 className="text-2xl font-black text-white text-shadow-lg pr-12">{product.name}</h3>
         {/* NOTES: This is just an example for you to comment out to test, you need to add your own UI styles! */}
-        {/* [BONUS TODO 3]: {isLowStock && product.stock > 0 && (
+        {/* Latest Add: Low Stock Badge [BONUS TODO 3] */}
+        {isLowStock && !isOutOfStock && (
           <div className="mt-2">
-            <span className="inline-flex items-center gap-1 bg-white/20 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full">
+            <span className="inline-flex items-center gap-1 bg-amber-500/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full shadow-sm animate-pulse">
               ⚡ Low Stock
             </span>
           </div>
-        )} */}
+        )} 
       </div>
 
       <div className="p-6 space-y-4">
@@ -92,19 +94,22 @@ export default function ProductCard({
           </div>
         </div>
 
-        {/* Buy Button */}
-        {/* [TODO 2]: button is expected to be disabled if 
-        1. balance is not loaded (done for you as example)
-        2. product is out of stock, button text:"❌ Out of Stock"
-        3. already purchasing, button text: "⏳ Processing..."
-        when disabled, apply appropriate UI styles HINT: change text color and background color to grey and appropriate hover effect
-        */}
+        {/* Button Logic [TODO 2] */}
         <button
           onClick={() => onBuyProduct(product.id)}
-          disabled={balance === null}
-          className={`w-full py-4 px-6 rounded-2xl font-black text-lg transition-all duration-300 shadow-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white hover:shadow-2xl hover:scale-105 active:scale-95}`}
+          disabled={balance === null || isOutOfStock || isPurchasing}
+          className={`w-full py-4 px-6 rounded-2xl font-black text-lg transition-all duration-300 shadow-xl 
+            ${balance === null || isOutOfStock || isPurchasing 
+                ? 'bg-gray-200 text-gray-400 cursor-not-allowed shadow-none' 
+                : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 hover:from-blue-700 hover:via-indigo-700 hover:to-purple-700 text-white hover:shadow-2xl hover:scale-105 active:scale-95'}`}
         >
-          {balance === null ? '🔒 Start Machine' :'🛒 Buy Now'}
+          {balance === null 
+            ? '🔒 Start Machine First' 
+            : isPurchasing 
+                ? '⏳ Processing...' 
+                : isOutOfStock 
+                    ? '❌ Out of Stock' 
+                    : '🛒 Buy Now'}
         </button>
       </div>
     </div>

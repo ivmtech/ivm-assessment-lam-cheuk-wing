@@ -74,15 +74,41 @@ export default function ProductsPage(){
 
     try {
       // [TODO 1]: Get quantity from state and send it in the request
-      // const quantity = quantities[productId] || 1;
-      // const res = await api.post<PurchaseResponse>('/products/purchase', { productId, quantity });
-      const res = await api.post<PurchaseResponse>('/products/purchase', { productId });
+      const quantity = quantities[productId] || 1;
+      const cost = product.price * quantity;
+
+      if (balance === null) {
+        setMessage("❌ Please start the machine first");
+        setPurchasing(prev => ({...prev, [productId]: false}));
+        return;
+      }
+
+      if (balance < cost) {
+        setMessage(`❌ Insufficient funds! You have $${balance.toFixed(2)} but need $${cost.toFixed(2)}`);
+        setPurchasing(prev => ({...prev, [productId]: false}));
+        return;
+      }
+
+      if (quantity <= 0) {
+        setMessage("❌ Invalid quantity");
+        setPurchasing(prev => ({...prev, [productId]: false}));
+        return;
+      }
+      const res = await api.post<PurchaseResponse>('/products/purchase', { productId, quantity });
       if (res.data.success) {
         setMessage(`✅ Purchase successful! ${res.data.remaining || 0} items remaining.`);
-        // [TODO 1]: After successful purchase:
-        // 1. Reload products using loadProducts() to get updated stock
-        // 2. Update balance: setBalance(balance - res.data.totalCost) to deduct purchase cost
-        // 3. Reset quantity for this product: setQuantities({...quantities, [productId]: 1})
+        
+        // 1. Reload products to get updated stock
+        loadProducts();
+        
+        // 2. Update balance
+        if (res.data.totalCost) {
+            setBalance(prev => (prev !== null ? prev - res.data.totalCost : null));
+        }
+
+        // 3. Reset quantity for this product
+        setQuantities(prev => ({...prev, [productId]: 1}));
+
       } else {
         setMessage(`❌ Purchase failed: ${res.data.message || 'Purchase failed'}`);
       }
@@ -90,14 +116,17 @@ export default function ProductsPage(){
       console.error(e);
       setMessage(`❌ Purchase failed: ${e.response?.data?.message || 'Request failed'}`);
     } finally {
-      setPurchasing({...purchasing, [productId]: false});
+      setPurchasing(prev => ({...prev, [productId]: false}));
     }
   }
 
 
 
   function updateQuantity(productId: string, newQty: number) {
-    // [TODO 1]: Find Correct Product and Update Quantity
+    setQuantities(prev => ({
+      ...prev,
+      [productId]: newQty
+    }));
   }
 
   return (

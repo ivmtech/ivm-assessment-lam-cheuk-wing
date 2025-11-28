@@ -9,37 +9,38 @@ export default function PurchasePage(){
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   
-
   const [searchProduct, setSearchProduct] = useState('');
-    // BONUS TODO: Filter and sort states
+      // BONUS TODO: Filter and sort states
   const [dateFilter, setDateFilter] = useState<'all' | '24h' | '7d'>('all');
   const [sortField, setSortField] = useState<'date' | 'amount' | 'product'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
 
+  // Reload when any filter changes [BONUS TODO 5]
   useEffect(() => {
     loadPurchases();
-  }, []);
+  }, [searchProduct, dateFilter, sortField, sortOrder]);
 
   function loadPurchases(){
     setLoading(true);
     setError('');
 
-    // [BONUS TODO 5]: You can add backend filtering here if you implement it
-    // The backend accepts PurchaseFilterParams with these query parameters:
-    // - hours: number
-    // - sortField: 'date' | 'amount' | 'product'
-    // - sortOrder: 'asc' | 'desc'
-    //
-    // Example with all filters:
-    // const params = new URLSearchParams({
-    //   hours: dateFilter === '24h' ? '24' : dateFilter === '7d' ? '168' : '',
-    //   sortField: sortField,
-    //   sortOrder: sortOrder
-    // });
-    // api.get(`/products/purchases?${params.toString()}`)
-    //
+    // Server Side Filtering Logic [BONUS TODO 5]
+    const params = new URLSearchParams();
 
-    api.get('/products/purchases')
+    // Map frontend 'dateFilter' to backend 'hours' param
+    if (dateFilter === '24h') params.append('hours', '24');
+    if (dateFilter === '7d') params.append('hours', '168');
+
+    // Map sorting
+    params.append('sortField', sortField);
+    params.append('sortOrder', sortOrder);
+
+    // Map search
+    if (searchProduct) {
+        params.append('searchTerm', searchProduct);
+    }
+
+    api.get(`/products/purchases?${params.toString()}`)
       .then(res => {
         if (Array.isArray(res.data)) {
           setPurchases(res.data);
@@ -65,23 +66,22 @@ export default function PurchasePage(){
     }
   }
 
- 
+  // Client-side filtering logic [TODO 4]
+  // Note: While server-side filtering is implemented above via API params, 
+  // this memo is kept to fulfill the [TODO 4] client-side requirement if backend filtering wasn't used.
+  // Since backend does the heavy lifting now, this acts as a secondary filter or pass-through.
   const filteredAndSortedPurchases = useMemo(() => {
     let filtered = [...purchases];
 
-
     if (searchProduct) {
-      // [TODO 4]: client side filter by search product
+      // Client-side filter by search product (case-insensitive)
+      filtered = filtered.filter(p => 
+        p.productName.toLowerCase().includes(searchProduct.toLowerCase())
+      );
     }
 
     return filtered;
   }, [purchases, searchProduct]);
-
-
-  const uniqueMachineIds = useMemo(() => {
-    const machines = [...new Set(purchases.map(p => p.machineId))].filter(Boolean);
-    return machines.sort();
-  }, [purchases]);
 
   return (
     <div className="min-h-screen p-4 md:p-6 lg:p-8 pb-12">
@@ -128,13 +128,13 @@ export default function PurchasePage(){
           <div className="glass-card rounded-3xl shadow-2xl p-16 text-center border-2 border-gray-200">
             <div className="text-8xl mb-6 animate-bounce">📋</div>
             <h3 className="text-3xl font-bold gradient-text mb-3">No Purchases Found</h3>
-            <p className="text-gray-600 text-lg">Make a purchase on the Products page to see history here.</p>
+            <p className="text-gray-600 text-lg">Make a purchase on the Products page to see history here or adjust filters.</p>
           </div>
         )}
 
-        {!loading && purchases.length > 0 && (
+        {/* Removed check for purchases.length > 0 to allow showing filters even if empty results (e.g., search gave 0 results) */}
+        {!loading && (
           <>
-
             <div className="glass-card rounded-3xl shadow-xl border-2 border-gray-200 p-8 mb-8">
               <div className="flex items-center gap-3 mb-6">
                 <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-lg">
@@ -152,13 +152,12 @@ export default function PurchasePage(){
                     type="text"
                     placeholder="Search by product name..."
                     value={searchProduct}
+                    // debounce could be added here for optimization, but standard onChange is fine for this scale
                     onChange={(e) => setSearchProduct(e.target.value)}
                     className="input-field w-full"
                   />
                 </div>
-
                
-                {/* [BONUS TODO 5]: Filter and sort logic */}
                 {/* Filter by date */}
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
@@ -174,8 +173,8 @@ export default function PurchasePage(){
                     <option value="7d">Last 7 Days</option>
                   </select>
                 </div>
-                {/* [BONUS TODO 5]: Filter by date */}
-                {/* [BONUS TODO 5]: Sort options */}
+
+                {/* Sort options */}
                 <div>
                   <label className="block text-xs font-bold text-gray-500 uppercase tracking-wide mb-2">
                     🔀 Sort By
